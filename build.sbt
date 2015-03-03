@@ -13,3 +13,7 @@ libraryDependencies ++= Seq (
   "org.apache.santuario" % "xmlsec" % "1.4.6" % "test",
   "org.slf4j" % "slf4j-log4j12" % "1.7.7"
     )
+
+//TODO: write an XSLT transforming function, and then make some tasks?
+// targetDirectory, fileList, stylesheet, possibly with some parameters
+// Use Saxon-HE to do it, so that needs to be part of this guy's classpath
