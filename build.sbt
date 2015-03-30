@@ -28,23 +28,23 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-explaintypes")
 ivyScala := ivyScala.value map {
   _.copy(overrideScalaVersion = true)
 }
-unmanagedResourceDirectories in Compile <++= baseDirectory { base =>
-  Seq(
-    base / "wadl",
-    base / "xsd",
-    base / "xsl"
-  )
+unmanagedResourceDirectories in Compile <+= baseDirectory { base =>
+  base / "src" / "main" / "xmls"
 }
+
 resourceGenerators in Compile += xmlTransforms.taskValue
 
 lazy val xmlTransforms = taskKey[Seq[File]]("Do the xml translation insanity")
-xmlTransforms := doXmlTranslations(baseDirectory.value, streams.value.log)
+xmlTransforms := doXmlTranslations(
+  baseDirectory.value / "src" / "main" / "xmls",
+  baseDirectory.value / "target",
+  streams.value.log)
 
 // http://www.scala-sbt.org/0.13/docs/Howto-Generating-Files.html
 //Transformation logic: https://github.com/rackerlabs/repose/blob/master/repose-aggregator/commons/configuration/src/main/java/org/openrepose/commons/config/parser/jaxb/UnmarshallerValidator.java#L83
 // TODO: this is super nasty. All this stupid xml transformation crap
 // TODO: Convert it to scala code in a scala class somewhere the build can use
-def doXmlTranslations(base: File, log: Logger): Seq[File] = {
+def doXmlTranslations(base: File, outputBase: File, log: Logger): Seq[File] = {
 
   val factory = new TransformerFactoryImpl()
   val transformer: TransformerFactory = {
@@ -97,9 +97,9 @@ def doXmlTranslations(base: File, log: Logger): Seq[File] = {
   //Then we take the result of that file, and run these two more transforms on it, producing a new .sch and a .xsl
   //Those go into the generated resources
   //Need to have somewhere to put the generated sources
-  (base / "target" / "xml" / "xslt").mkdirs()
-  val secondOutput = base / "target" / "xml" / "xslt" / "wadl.sch"
-  val thirdOutput = base / "target" / "xml" / "xslt" / "wadl.xsl"
+  (outputBase / "xml" / "xslt").mkdirs()
+  val secondOutput = outputBase / "xml" / "xslt" / "wadl.sch"
+  val thirdOutput = outputBase / "xml" / "xslt" / "wadl.xsl"
   log.info("Transforming generated wadl.sch with xsl/iso-sch/iso_abstract_expand.xsl")
 
   xform(
@@ -115,5 +115,5 @@ def doXmlTranslations(base: File, log: Logger): Seq[File] = {
     Map("select-contexts" -> "key")
   )
   log.info("Completed")
-  Seq(base / "target" / "xml")
+  Seq(secondOutput, thirdOutput)
 }
