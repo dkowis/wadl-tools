@@ -22,17 +22,19 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-log4j12" % "1.7.7"
 )
 
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-explaintypes")
+
 //Forcing the scala version to my version to avoid so many warnings
 ivyScala := ivyScala.value map {
   _.copy(overrideScalaVersion = true)
 }
-unmanagedResourceDirectories in Compile ++= Seq(
-  baseDirectory.value / "wadl",
-  baseDirectory.value / "xsd",
-  baseDirectory.value / "xsl"
-)
-//TODO: include generated-resources/xml/xslt/wadl.xsl
-
+unmanagedResourceDirectories in Compile <++= baseDirectory { base =>
+  Seq(
+    base / "wadl",
+    base / "xsd",
+    base / "xsl"
+  )
+}
 resourceGenerators in Compile += xmlTransforms.taskValue
 
 lazy val xmlTransforms = taskKey[Seq[File]]("Do the xml translation insanity")
@@ -49,8 +51,6 @@ def doXmlTranslations(base: File, log: Logger): Seq[File] = {
     val instance = TransformerFactory.newInstance()
     val resolver = new URIResolver {
       override def resolve(href: String, xslBase: String): Source = {
-        //TODO: this should somehow be relative to the xsl file itself :(
-
         new StreamSource(new FileInputStream(base / "xsl" / "iso-sch" / href))
       }
     }
@@ -96,6 +96,7 @@ def doXmlTranslations(base: File, log: Logger): Seq[File] = {
   val firstResultContent = firstResult.toString
   //Then we take the result of that file, and run these two more transforms on it, producing a new .sch and a .xsl
   //Those go into the generated resources
+  //Need to have somewhere to put the generated sources
   (base / "target" / "xml" / "xslt").mkdirs()
   val secondOutput = base / "target" / "xml" / "xslt" / "wadl.sch"
   val thirdOutput = base / "target" / "xml" / "xslt" / "wadl.xsl"
@@ -114,5 +115,5 @@ def doXmlTranslations(base: File, log: Logger): Seq[File] = {
     Map("select-contexts" -> "key")
   )
   log.info("Completed")
-  Seq(secondOutput, thirdOutput)
+  Seq(base / "target" / "xml")
 }
